@@ -12,11 +12,13 @@ const useStyles = makeStyles((theme) => ({
   }
 }));
 
-const Chats = () => {
+const Chats = (props) => {
   const classes = useStyles();
   return(
     <List className={classes.root}>
-      <Chat />
+      {props.chats.map((chat, index) => {
+        return <Chat text={chat.text} type={chat.type} key={index.toString()}/>
+      })}
     </List>
   )
 
