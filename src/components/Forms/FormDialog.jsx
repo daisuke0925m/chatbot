@@ -46,7 +46,7 @@ export default class FormDialog extends React.Component {
       method: 'POST',
       body: JSON.stringify(payload)
     }).then(() => {
-      alert('送信が完了いたしました。')
+      alert('送信が完了いたしました!')
       this.setState({
         name: "",
         email: "",
