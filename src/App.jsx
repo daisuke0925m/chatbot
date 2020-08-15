@@ -1,113 +1,98 @@
-import React from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {AnswersList, Chats} from './components/index'
 import FormDialog from './components/Forms/FormDialog';
 import {db} from './firebase/index'
 
-export default class App extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      answers: [],
-      chats: [],
-      currentId: 'init',
-      dataset: {},
-      open: false
-    }
-    this.selectAnswer = this.selectAnswer.bind(this)
-    this.handleClose = this.handleClose.bind(this)
-    this.handleClickOpen = this.handleClickOpen.bind(this)
-  }
+const App = () => {
+  const [ answers, setAnswers ] = useState([])
+  const [ chats, setChats ] = useState([])
+  const [ currentId, setCurrentId ] = useState("init")
+  const [ dataset, setDataset ] = useState({})
+  const [ open, setOpen ] = useState(false)
 
-  displayNextQuestion = (nextQuestionId) => {
-    const chats = this.state.chats
-    chats.push({
-      text: this.state.dataset[nextQuestionId].question,
+  const displayNextQuestion = (nextQuestionId, nextDataset) => {
+    addChats({
+      text: nextDataset.question,
       type: 'question'
     })
 
-    this.setState({
-      answers: this.state.dataset[nextQuestionId].answers,
-      chats: chats,
-      currentId: nextQuestionId
+      setAnswers(nextDataset.answers)
+      setCurrentId(nextQuestionId)
+  }
+
+  const selectAnswer = useCallback((selectedAnswer, nextQuestionId) => {
+    switch (true) {
+      case (nextQuestionId === 'contact'):
+        handleClickOpen();
+        break;
+
+      case /^https:*/.test(nextQuestionId):
+      const a = document.createElement('a');
+      a.href = nextQuestionId;
+      a.target = '_blank';
+      a.click();
+      break;
+
+        // 選択された回答をchatsに追加
+      default:
+      // 現在のチャット一覧を取得
+      addChats({
+          text: selectedAnswer,
+          type: 'answer'
+      })
+
+      setTimeout(() => displayNextQuestion(nextQuestionId, dataset[nextQuestionId]), 750)
+      break;
+    }
+  },[answers]);
+
+  const addChats = (chat) => {
+    setChats(prevChats => {
+      return [...prevChats, chat]
     })
   }
 
-  selectAnswer = (selectedAnswer, nextQuestionId) => {
-    switch(true) {
-      case (nextQuestionId === 'init'):
-        setTimeout(() => this.displayNextQuestion(nextQuestionId), 1000)
-        break;
-      case (nextQuestionId === 'contact'):
-        this.handleClickOpen()
-        break;
-      case (/^https:*/.test(nextQuestionId)):
-        const a = document.createElement('a')
-        a.href = nextQuestionId
-        a.target = '_blank'
-        a.click()
-        break;
-      default:
-        const chats = this.state.chats;
-        chats.push({
-          text: selectedAnswer,
-          type: 'answer'
-        })
+  const handleClickOpen = useCallback(() => {
+    setOpen(true);
+  },[setOpen]);
 
-        this.setState({
-          chats: chats
-        })
+  const handleClose = useCallback(() => {
+    setOpen(false)
+  }, [setOpen])
 
-        setTimeout(() => this.displayNextQuestion(nextQuestionId), 1000)
-        break;
-    }
-  }
-
-  handleClickOpen = () => {
-    this.setState({open: true});
-  };
-
-  handleClose = () => {
-    this.setState({open: false});
-  };
-
-  initDataset = (dataset) => {
-    this.setState({dataset: dataset})
-  }
-
-  componentDidMount() {
-
+  useEffect(() => {
     (async()=> {
-      const dataset = this.state.dataset
+      const initDataset = {}
 
       await db.collection('questions').get().then(snapshots => {
         snapshots.forEach(doc => {
           const id = doc.id
           const data = doc.data()
-          dataset[id] = data
+          initDataset[id] = data
         })
       })
-      this.initDataset(dataset)
-    const initAnswer = ""
-    this.selectAnswer(initAnswer, this.state.currentId)
+      setDataset(initDataset)
+      displayNextQuestion(currentId, initDataset[currentId])
     })()
-  }
+  }, [])
 
-  componentDidUpdate(prevProps, prevState, snapshot ){
+  useEffect(() => {
     const scrollArea = document.getElementById('scroll-area')
     if (scrollArea) {
       scrollArea.scrollTop = scrollArea.scrollHeight
     }
-  }
+  })
 
-  render() {
-    return (
-      <section className="c-section">
-        <div className='c-box'>
-          <Chats chats={this.state.chats}/>
-          <AnswersList answers={this.state.answers} select={this.selectAnswer}/>
-          <FormDialog open={this.state.open} handleClose={this.handleClose} handleClickOpen={this.handleClickOpen}/>
-        </div>
-      </section>
-    );
-  }
+  return (
+    <section className="c-section">
+      <div className='c-box'>
+        <Chats chats={chats}/>
+        <AnswersList answers={answers} select={selectAnswer}/>
+        <FormDialog open={open} handleClose={handleClose} handleClickOpen={handleClickOpen}/>
+      </div>
+    </section>
+  );
+
 }
+
+export default App
